@@ -3,7 +3,7 @@ import { lazy, StrictMode, Suspense, useCallback, useEffect, useMemo, useRef, us
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import {
-  ACTIVE_SEASON, app, BRAND, FILTERS, getSeason, isFirebaseConfigured, Logo, normalizeProduct,
+  ACTIVE_SEASON, app, BRAND, buyLabel, FILTERS, getSeason, isFirebaseConfigured, Logo, normalizeProduct,
   RECIPIENTS, SafeImage, SEED_PRODUCTS, tileBg, useEscape, type Product, type Season,
 } from './shared';
 import './style.css';
@@ -270,7 +270,7 @@ function Spotlight({ product: p }: { product: Product }) {
           <p>{p.why}</p>
           <div className="meta"><span>{p.category}</span><span>Best for: {p.bestFor}</span></div>
           <div className="buy">
-            <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent">View deal <Arrow /></a>
+            <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent">{buyLabel(p)} <Arrow /></a>
           </div>
         </div>
       </article>
@@ -304,7 +304,7 @@ function GiftFinder({ products }: { products: Product[] }) {
             <a key={p.id} className="match" href={p.url} target="_blank" rel="nofollow sponsored noopener">
               <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
               <span style={{ minWidth: 0 }}><span className="n" style={{ display: 'block' }}>{p.title}</span><span className="s" style={{ display: 'block' }}>{p.bestFor}</span></span>
-              <span className="go">Shop →</span>
+              <span className="go">{buyLabel(p)} →</span>
             </a>
           ))}
         </div>
@@ -329,7 +329,7 @@ function ProductCard({ product: p, index, saved, comparing, highlighted, onSave,
         {p.bestFor && <span className="best"><IconCheck size={14} />Best for: {p.bestFor}</span>}
         <p className="why">{p.why}</p>
         <div className="actions">
-          <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent">View deal <Arrow /></a>
+          <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent">{buyLabel(p)} <Arrow /></a>
           <button onClick={onCompare} aria-pressed={comparing} aria-label={comparing ? `Remove ${p.title} from comparison` : `Compare ${p.title}`} title="Compare" className="sq"><IconCompare /></button>
           <button onClick={onShare} aria-label={`Share ${p.title}`} title="Share" className="sq"><IconShare /></button>
         </div>
@@ -370,7 +370,7 @@ function CompareModal({ items, onClose, onRemove }: { items: Product[]; onClose:
                     <div><dt>Why we picked it</dt><dd>{p.why || '—'}</dd></div>
                     <div><dt>Our rating</dt><dd>{p.badge ?? 'Curated pick'}</dd></div>
                   </dl>
-                  <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent" style={{ marginTop: 'auto' }}>View deal <Arrow /></a>
+                  <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent" style={{ marginTop: 'auto' }}>{buyLabel(p)} <Arrow /></a>
                   <button onClick={() => onRemove(p.id)} className="linkbtn">Remove</button>
                 </div>
               );
@@ -394,7 +394,7 @@ function SavedDrawer({ items, onClose, onRemove }: { items: Product[]; onClose: 
               <li key={p.id}>
                 <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
                 <span style={{ minWidth: 0, flex: 1 }}><span className="n" style={{ display: 'block' }}>{p.title}</span></span>
-                <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent pz-btn-sm">Shop</a>
+                <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent pz-btn-sm">{buyLabel(p)}</a>
                 <button className="rm" onClick={() => onRemove(p.id)} aria-label={`Remove ${p.title}`}>✕</button>
               </li>
             ))}
@@ -428,7 +428,7 @@ function Faq() {
   const items = [
     ['How does PickerZone make money?', 'When you buy through a link on this site, the retailer may pay us a small commission. It never changes the price you pay.'],
     ['Do affiliate links affect which products you recommend?', 'No. Picks are chosen on value, quality and fit first. If we would not gift it to a friend, it does not make the list.'],
-    ['Where can I see the price?', 'Prices change often, so we do not list them. Tap “View deal” to see the current price on the retailer’s page.'],
+    ['Where can I see the price?', 'Prices change often, so we do not list them. Tap the “Buy on Amazon” or “Buy on eBay” button to see the current price on the retailer’s page.'],
     ['Can I save things for later?', 'Yes. Tap the heart on any pick and it is kept in My Picks on this device, no account needed.'],
   ];
   return (
