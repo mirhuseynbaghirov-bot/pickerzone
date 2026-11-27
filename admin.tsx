@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import {
-  ACTIVE_SEASON, app, formatPrice, isFirebaseConfigured, Logo, normalizeProduct, RECIPIENTS, SafeImage, SEASONS,
+  ACTIVE_SEASON, app, isFirebaseConfigured, Logo, normalizeProduct, RECIPIENTS, SafeImage, SEASONS,
   SEED_PRODUCTS, TAGS, useEscape, type Product,
 } from './shared';
 
@@ -77,11 +77,10 @@ function Login() {
 
 /* ───────── Product form ───────── */
 const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'product';
-const blank = (season: string): Product => ({ id: '', title: '', price: 0, priceLabel: '', season, category: '', tags: [], recipients: [], badge: undefined, bestFor: '', why: '', url: '', image: '', emoji: '🛍️', isActive: true });
+const blank = (season: string): Product => ({ id: '', title: '', season, category: '', tags: [], recipients: [], badge: undefined, bestFor: '', why: '', url: '', image: '', emoji: '🛍️', isActive: true });
 
 function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Product | null; defaultSeason: string; onCancel: () => void; onSave: (p: Product) => Promise<void> }) {
   const [d, setD] = useState<Product>(initial ?? blank(defaultSeason));
-  const [priceText, setPriceText] = useState(initial ? String(initial.price) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEscape(onCancel);
@@ -90,13 +89,11 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const price = Number(priceText);
     if (!d.title.trim()) return setError('Title is required.');
-    if (!priceText || Number.isNaN(price) || price < 0) return setError('Enter a valid price number.');
     if (!/^https?:\/\//i.test(d.url.trim())) return setError('Affiliate URL must start with http:// or https://');
     setBusy(true); setError('');
     try {
-      await onSave({ ...d, title: d.title.trim(), price, priceLabel: d.priceLabel?.trim() || undefined, url: d.url.trim(), image: d.image?.trim() || undefined, emoji: d.emoji.trim() || '🛍️', id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
+      await onSave({ ...d, title: d.title.trim(), url: d.url.trim(), image: d.image?.trim() || undefined, emoji: d.emoji.trim() || '🛍️', id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
     } catch (err) { setError((err as Error).message || 'Could not save.'); setBusy(false); }
   };
 
@@ -106,8 +103,6 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
         <div className="flex items-center justify-between"><h2 className="font-display text-xl font-extrabold text-navy">{initial ? 'Edit product' : 'Add product'}</h2><button type="button" onClick={onCancel} className="btn-ghost" aria-label="Close">✕</button></div>
         <label className="block text-sm font-medium text-navy">Title<input className="input mt-1" value={d.title} onChange={(e) => set('title', e.target.value)} required /></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-navy">Price (number)<input className="input mt-1" inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value)} placeholder="14.99" required /></label>
-          <label className="block text-sm font-medium text-navy">Price text (optional)<input className="input mt-1" value={d.priceLabel ?? ''} onChange={(e) => set('priceLabel', e.target.value)} placeholder="From $14.99" /></label>
           <label className="block text-sm font-medium text-navy">Season<select className="input mt-1" value={d.season} onChange={(e) => set('season', e.target.value)}>{Object.values(SEASONS).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <label className="block text-sm font-medium text-navy">Category<input className="input mt-1" value={d.category} onChange={(e) => set('category', e.target.value)} placeholder="Lights" /></label>
         </div>
@@ -203,7 +198,7 @@ function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
                   <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="h-14 w-14 shrink-0 rounded-lg text-2xl" />
                   <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate font-bold text-navy">{p.title}</p>
-                    <p className="text-xs text-slate-500">{SEASONS[p.season]?.name ?? (p.season || 'No season')} · {formatPrice(p)}{p.category && ` · ${p.category}`}</p>
+                    <p className="text-xs text-slate-500">{SEASONS[p.season]?.name ?? (p.season || 'No season')}{p.category && ` · ${p.category}`}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <button className="pill py-1" aria-pressed={p.isActive} onClick={() => setProductActive(p.id, !p.isActive).catch(fail)}>{p.isActive ? 'Active' : 'Hidden'}</button>
