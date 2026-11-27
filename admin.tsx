@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import {
-  ACTIVE_SEASON, app, isFirebaseConfigured, Logo, normalizeProduct, RECIPIENTS, SafeImage, SEASONS,
-  SEED_PRODUCTS, TAGS, useEscape, type Product,
+  ACTIVE_SEASON, app, CLOUDINARY, isCloudinaryConfigured, isFirebaseConfigured, Logo, normalizeProduct, RECIPIENTS, SafeImage, SEASONS,
+  SEED_PRODUCTS, STORES, TAGS, useEscape, type Product,
 } from './shared';
 
 /* ───────── Firestore helpers ───────── */
@@ -75,9 +75,60 @@ function Login() {
   );
 }
 
+/* ───────── Cloudinary image upload (unsigned preset, straight from the browser) ───────── */
+const MAX_IMAGE_MB = 8;
+function uploadToCloudinary(file: File, onProgress: (pct: number) => void): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('upload_preset', CLOUDINARY.uploadPreset!);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onerror = () => reject(new Error('Network error while uploading the image.'));
+    xhr.onload = () => {
+      let data: { secure_url?: string; error?: { message?: string } } = {};
+      try { data = JSON.parse(xhr.responseText); } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) resolve(data.secure_url);
+      else reject(new Error(data.error?.message ? `Cloudinary: ${data.error.message}` : 'Image upload failed.'));
+    };
+    xhr.send(body);
+  });
+}
+
+function ImageUpload({ value, emoji, alt, onChange, onError }: { value?: string; emoji: string; alt: string; onChange: (url: string | undefined) => void; onError: (msg: string) => void }) {
+  const [pct, setPct] = useState<number | null>(null);
+  const pick = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return onError('Please choose an image file (JPG, PNG, WebP).');
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) return onError(`Image is too large. Maximum is ${MAX_IMAGE_MB} MB.`);
+    onError(''); setPct(0);
+    try { onChange(await uploadToCloudinary(file, setPct)); }
+    catch (err) { onError((err as Error).message); }
+    finally { setPct(null); }
+  };
+  return (
+    <div>
+      <span className="block text-sm font-medium text-navy">Product image</span>
+      {!isCloudinaryConfigured && <p className="mt-1 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">Image upload is not set up yet. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in Vercel and redeploy (see CLOUDINARY_TELIMATI.md).</p>}
+      <div className="mt-1 flex items-center gap-3">
+        <SafeImage key={value ?? ''} src={value} alt={alt} emoji={emoji || '🛍️'} className="h-28 w-28 shrink-0 rounded-lg" />
+        <div className="space-y-2">
+          <label className={`btn-ghost inline-block cursor-pointer ${!isCloudinaryConfigured || pct !== null ? 'pointer-events-none opacity-50' : ''}`}>
+            {pct !== null ? `Uploading… ${pct}%` : value ? 'Replace image' : 'Upload image'}
+            <input type="file" accept="image/*" className="sr-only" disabled={!isCloudinaryConfigured || pct !== null} onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = ''; }} />
+          </label>
+          {value && pct === null && <div><button type="button" className="text-xs text-red-600 underline" onClick={() => onChange(undefined)}>Remove image</button></div>}
+          <p className="text-xs text-slate-500">JPG, PNG or WebP, up to {MAX_IMAGE_MB} MB.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ───────── Product form ───────── */
 const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'product';
-const blank = (season: string): Product => ({ id: '', title: '', season, category: '', tags: [], recipients: [], badge: undefined, bestFor: '', why: '', url: '', image: '', emoji: '🛍️', isActive: true });
+const blank = (season: string): Product => ({ id: '', title: '', season, category: '', tags: [], recipients: [], badge: undefined, store: undefined, bestFor: '', why: '', url: '', image: undefined, emoji: '🛍️', isActive: true });
 
 function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Product | null; defaultSeason: string; onCancel: () => void; onSave: (p: Product) => Promise<void> }) {
   const [d, setD] = useState<Product>(initial ?? blank(defaultSeason));
@@ -90,10 +141,11 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!d.title.trim()) return setError('Title is required.');
+    if (!d.store) return setError('Choose where the product is sold: Amazon or eBay.');
     if (!/^https?:\/\//i.test(d.url.trim())) return setError('Affiliate URL must start with http:// or https://');
     setBusy(true); setError('');
     try {
-      await onSave({ ...d, title: d.title.trim(), url: d.url.trim(), image: d.image?.trim() || undefined, emoji: d.emoji.trim() || '🛍️', id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
+      await onSave({ ...d, title: d.title.trim(), url: d.url.trim(), image: d.image || undefined, emoji: d.emoji.trim() || '🛍️', id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
     } catch (err) { setError((err as Error).message || 'Could not save.'); setBusy(false); }
   };
 
@@ -112,12 +164,10 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
           <label className="block text-sm font-medium text-navy">Badge<select className="input mt-1" value={d.badge ?? ''} onChange={(e) => set('badge', (e.target.value || undefined) as Product['badge'])}><option value="">None</option><option>Top Pick</option><option>Trending</option></select></label>
           <label className="block text-sm font-medium text-navy">Best for<input className="input mt-1" value={d.bestFor} onChange={(e) => set('bestFor', e.target.value)} placeholder="Cozy corners" /></label>
         </div>
-        <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-          <label className="block text-sm font-medium text-navy">Image URL<input className="input mt-1" value={d.image ?? ''} onChange={(e) => set('image', e.target.value)} placeholder="https://…" /></label>
-          <label className="block w-20 text-sm font-medium text-navy">Emoji<input className="input mt-1 text-center" value={d.emoji} onChange={(e) => set('emoji', e.target.value)} maxLength={4} /></label>
-        </div>
-        <SafeImage key={d.image ?? ''} src={d.image || undefined} alt="Preview" emoji={d.emoji || '🛍️'} className="h-28 w-40 rounded-lg" />
-        <label className="block text-sm font-medium text-navy">Affiliate URL<input className="input mt-1" type="url" value={d.url} onChange={(e) => set('url', e.target.value)} placeholder="https://…" required /></label>
+        <ImageUpload value={d.image} emoji={d.emoji} alt={d.title || 'Preview'} onChange={(url) => set('image', url)} onError={setError} />
+        <label className="block w-24 text-sm font-medium text-navy">Emoji (no-image fallback)<input className="input mt-1 text-center" value={d.emoji} onChange={(e) => set('emoji', e.target.value)} maxLength={4} /></label>
+        <fieldset><legend className="text-sm font-medium text-navy">Where is it sold? (button on the site)</legend><div className="mt-1 flex flex-wrap gap-2">{STORES.map((s) => <button type="button" key={s.id} className="pill" aria-pressed={d.store === s.id} onClick={() => set('store', s.id)}>{s.label}</button>)}</div></fieldset>
+        <label className="block text-sm font-medium text-navy">Affiliate link (Amazon / eBay product link)<input className="input mt-1" type="url" value={d.url} onChange={(e) => set('url', e.target.value)} placeholder="https://…" required /></label>
         <label className="block text-sm font-medium text-navy">Why we picked it<textarea className="input mt-1" rows={3} value={d.why} onChange={(e) => set('why', e.target.value)} /></label>
         <label className="flex items-center gap-2 text-sm font-medium text-navy"><input type="checkbox" checked={d.isActive} onChange={(e) => set('isActive', e.target.checked)} className="h-4 w-4 accent-[#FF6B00]" />Active (visible on the public site)</label>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
@@ -198,7 +248,7 @@ function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
                   <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="h-14 w-14 shrink-0 rounded-lg text-2xl" />
                   <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate font-bold text-navy">{p.title}</p>
-                    <p className="text-xs text-slate-500">{SEASONS[p.season]?.name ?? (p.season || 'No season')}{p.category && ` · ${p.category}`}</p>
+                    <p className="text-xs text-slate-500">{SEASONS[p.season]?.name ?? (p.season || 'No season')}{p.category && ` · ${p.category}`} · {STORES.find((s) => s.id === p.store)?.label ?? 'No store'}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <button className="pill py-1" aria-pressed={p.isActive} onClick={() => setProductActive(p.id, !p.isActive).catch(fail)}>{p.isActive ? 'Active' : 'Hidden'}</button>
