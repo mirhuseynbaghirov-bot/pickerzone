@@ -3,7 +3,7 @@ import { lazy, StrictMode, Suspense, useCallback, useEffect, useMemo, useRef, us
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import {
-  ACTIVE_SEASON, app, BRAND, FILTERS, formatPrice, getSeason, isFirebaseConfigured, Logo, normalizeProduct,
+  ACTIVE_SEASON, app, BRAND, FILTERS, getSeason, isFirebaseConfigured, Logo, normalizeProduct,
   RECIPIENTS, SafeImage, SEED_PRODUCTS, tileBg, useEscape, type Product, type Season,
 } from './shared';
 import './style.css';
@@ -221,7 +221,7 @@ function Hero({ season, products, query, onQuery, onSearch, onFilter }: { season
           {feature.map((p) => (
             <a key={p.id} className="float" href={`#p-${p.id}`}>
               <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
-              <span><span className="n">{p.title}</span><span className="p" style={{ display: 'block' }}><b>{formatPrice(p)}</b> · {p.badge ?? p.category}</span></span>
+              <span><span className="n">{p.title}</span><span className="p" style={{ display: 'block' }}>{p.badge ?? p.category}</span></span>
             </a>
           ))}
         </div>
@@ -233,7 +233,6 @@ function Hero({ season, products, query, onQuery, onSearch, onFilter }: { season
 
 /* ───────── categories ───────── */
 const CAT_META: Record<string, { icon: string; blurb: string }> = {
-  under25: { icon: '💸', blurb: 'Big joy, small price' },
   gift: { icon: '🎁', blurb: 'Ready-to-wrap winners' },
   decor: { icon: '🏠', blurb: 'Make your space glow' },
   trending: { icon: '🔥', blurb: 'What everyone is saving' },
@@ -271,7 +270,6 @@ function Spotlight({ product: p }: { product: Product }) {
           <p>{p.why}</p>
           <div className="meta"><span>{p.category}</span><span>Best for: {p.bestFor}</span></div>
           <div className="buy">
-            <span className="price">{formatPrice(p)}</span>
             <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent">View deal <Arrow /></a>
           </div>
         </div>
@@ -281,37 +279,31 @@ function Spotlight({ product: p }: { product: Product }) {
 }
 
 /* ───────── gift finder ───────── */
-const BUDGETS = [{ max: 25, label: 'Under $25' }, { max: 50, label: 'Under $50' }, { max: Infinity, label: 'Any budget' }];
 const WHO_ICON: Record<string, string> = { 'For Her': '👩', 'For Him': '👨', Friends: '🧑‍🤝‍🧑', Home: '🏡' };
 function GiftFinder({ products }: { products: Product[] }) {
   const [who, setWho] = useState<string | null>(null);
-  const [max, setMax] = useState<number>(Infinity);
   const matches = useMemo(() => !who ? [] : products
-    .filter((p) => p.recipients.includes(who) && p.price <= max)
-    .sort((a, b) => Number(b.badge === 'Top Pick') - Number(a.badge === 'Top Pick') || a.price - b.price).slice(0, 3), [products, who, max]);
+    .filter((p) => p.recipients.includes(who))
+    .sort((a, b) => Number(b.badge === 'Top Pick') - Number(a.badge === 'Top Pick')).slice(0, 3), [products, who]);
   return (
     <Reveal as="section" className="wrap section">
       <div id="finder" className="finder" aria-labelledby="finder-h" style={{ scrollMarginTop: 90 }}>
         <div className="finder-ctl">
           <span className="kicker">Gift finder</span>
-          <h3 id="finder-h">Two taps to the perfect gift.</h3>
-          <p>Tell us who it’s for and what you want to spend. We’ll do the rest.</p>
+          <h3 id="finder-h">One tap to the perfect gift.</h3>
+          <p>Tell us who it’s for. We’ll do the rest.</p>
           <div className="step" role="group" aria-label="Who is it for?">
             <div className="lbl"><span className="num">1</span>Who’s it for?</div>
             <div className="chips">{RECIPIENTS.map((w) => <button key={w} className="pz-chip" aria-pressed={who === w} onClick={() => setWho(w)}><span aria-hidden="true">{WHO_ICON[w] ?? '🎁'}</span>{w}</button>)}</div>
           </div>
-          <div className="step" role="group" aria-label="Budget">
-            <div className="lbl"><span className="num">2</span>Your budget</div>
-            <div className="chips">{BUDGETS.map((b) => <button key={b.label} className="pz-chip" aria-pressed={max === b.max} onClick={() => setMax(b.max)}>{b.label}</button>)}</div>
-          </div>
         </div>
         <div className="finder-out" aria-live="polite">
           {!who && <p className="empty-hint"><span className="big" aria-hidden="true">🎯</span>Pick who the gift is for and your best matches show up here.</p>}
-          {who && matches.length === 0 && <p className="empty-hint"><span className="big" aria-hidden="true">🤔</span>Nothing at that budget yet. Try a higher one.</p>}
+          {who && matches.length === 0 && <p className="empty-hint"><span className="big" aria-hidden="true">🤔</span>Nothing here yet. Try someone else.</p>}
           {matches.map((p) => (
             <a key={p.id} className="match" href={p.url} target="_blank" rel="nofollow sponsored noopener">
               <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
-              <span style={{ minWidth: 0 }}><span className="n" style={{ display: 'block' }}>{p.title}</span><span className="s" style={{ display: 'block' }}>{formatPrice(p)} · {p.bestFor}</span></span>
+              <span style={{ minWidth: 0 }}><span className="n" style={{ display: 'block' }}>{p.title}</span><span className="s" style={{ display: 'block' }}>{p.bestFor}</span></span>
               <span className="go">Shop →</span>
             </a>
           ))}
@@ -333,7 +325,7 @@ function ProductCard({ product: p, index, saved, comparing, highlighted, onSave,
       </div>
       <div className="card-body">
         <span className="cat-line">{p.category}</span>
-        <div className="title-row"><h3>{p.title}</h3><span className="price">{formatPrice(p)}</span></div>
+        <div className="title-row"><h3>{p.title}</h3></div>
         {p.bestFor && <span className="best"><IconCheck size={14} />Best for: {p.bestFor}</span>}
         <p className="why">{p.why}</p>
         <div className="actions">
@@ -362,7 +354,6 @@ function ProductSkeleton({ count = 6 }: { count?: number }) {
 /* ───────── compare + saved ───────── */
 function CompareModal({ items, onClose, onRemove }: { items: Product[]; onClose: () => void; onRemove: (id: string) => void }) {
   useEscape(onClose);
-  const lowest = Math.min(...items.map((p) => p.price));
   return (
     <div className="overlay center" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="Compare products" onClick={(e) => e.stopPropagation()} className="modal">
@@ -370,13 +361,10 @@ function CompareModal({ items, onClose, onRemove }: { items: Product[]; onClose:
         <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
           <div className="cmp-grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(230px, 1fr))` }}>
             {items.map((p) => {
-              const win = p.price === lowest;
               return (
-                <div key={p.id} className={`cmp-col ${win ? 'win' : ''}`}>
-                  {win && <span className="lowest">Lowest price</span>}
+                <div key={p.id} className="cmp-col">
                   <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="tile" />
                   <h3>{p.title}</h3>
-                  <span className="price">{formatPrice(p)}</span>
                   <dl>
                     <div><dt>Best for</dt><dd>{p.bestFor || '—'}</dd></div>
                     <div><dt>Why we picked it</dt><dd>{p.why || '—'}</dd></div>
@@ -405,7 +393,7 @@ function SavedDrawer({ items, onClose, onRemove }: { items: Product[]; onClose: 
             {items.map((p) => (
               <li key={p.id}>
                 <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
-                <span style={{ minWidth: 0, flex: 1 }}><span className="n" style={{ display: 'block' }}>{p.title}</span><span className="s" style={{ display: 'block' }}>{formatPrice(p)}</span></span>
+                <span style={{ minWidth: 0, flex: 1 }}><span className="n" style={{ display: 'block' }}>{p.title}</span></span>
                 <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent pz-btn-sm">Shop</a>
                 <button className="rm" onClick={() => onRemove(p.id)} aria-label={`Remove ${p.title}`}>✕</button>
               </li>
@@ -421,8 +409,8 @@ function SavedDrawer({ items, onClose, onRemove }: { items: Product[]; onClose: 
 function HowItWorks() {
   const steps = [
     { icon: '🔎', title: 'We search', text: 'We scan what people actually buy, save and rave about, then cut it down to the few worth your time.' },
-    { icon: '⚖️', title: 'We compare', text: 'Price, quality and who it suits best, lined up side by side so you can decide in seconds, not tabs.' },
-    { icon: '🛒', title: 'You shop smarter', text: 'Tap through to the retailer. You pay the same price; we may earn a small thank-you that keeps this free.' },
+    { icon: '⚖️', title: 'We compare', text: 'Quality and who it suits best, lined up side by side so you can decide in seconds, not tabs.' },
+    { icon: '🛒', title: 'You shop smarter', text: 'Tap through to the retailer. The price is the same for you; we may earn a small thank-you that keeps this free.' },
   ];
   return (
     <section id="how" className="wrap section" style={{ scrollMarginTop: 80 }}>
@@ -440,7 +428,7 @@ function Faq() {
   const items = [
     ['How does PickerZone make money?', 'When you buy through a link on this site, the retailer may pay us a small commission. It never changes the price you pay.'],
     ['Do affiliate links affect which products you recommend?', 'No. Picks are chosen on value, quality and fit first. If we would not gift it to a friend, it does not make the list.'],
-    ['Are the prices always current?', 'Prices and availability can change at any time, so always confirm on the retailer’s page before you buy.'],
+    ['Where can I see the price?', 'Prices change often, so we do not list them. Tap “View deal” to see the current price on the retailer’s page.'],
     ['Can I save things for later?', 'Yes. Tap the heart on any pick and it is kept in My Picks on this device, no account needed.'],
   ];
   return (
@@ -473,7 +461,7 @@ function Footer({ onJump }: { onJump: (filterId: string) => void }) {
             <ul>{BRAND.socials.map((s) => <li key={s.label}><a href={s.href} target="_blank" rel="noopener">{s.label}</a></li>)}</ul>
           </div>
         </div>
-        <div className="foot-bar"><span>© {new Date().getFullYear()} {BRAND.name}. {BRAND.tagline}</span><span>Prices and availability can change.</span></div>
+        <div className="foot-bar"><span>© {new Date().getFullYear()} {BRAND.name}. {BRAND.tagline}</span></div>
       </div>
     </footer>
   );
@@ -481,7 +469,6 @@ function Footer({ onJump }: { onJump: (filterId: string) => void }) {
 
 /* ───────── home page ───────── */
 const MAX_COMPARE = 3;
-type Sort = 'featured' | 'low' | 'high';
 const rank = (p: Product) => (p.badge === 'Top Pick' ? 0 : p.badge === 'Trending' ? 1 : 2);
 
 function Home() {
@@ -490,7 +477,6 @@ function Home() {
   const reducedMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [filter, setFilter] = useState('all');
-  const [sort, setSort] = useState<Sort>('featured');
   const [saved, setSaved] = useLocalStorage<string[]>('pz:saved', []);
   const [snowOn, setSnowOn] = useLocalStorage<boolean>('pz:snow', true);
   const [compare, setCompare] = useState<string[]>([]);
@@ -514,11 +500,9 @@ function Home() {
     const f = FILTERS.find((x) => x.id === filter) ?? FILTERS[0];
     const q = query.trim().toLowerCase();
     const out = products.filter((p) => f.test(p) && (!q || `${p.title} ${p.category} ${p.bestFor} ${p.why}`.toLowerCase().includes(q)));
-    if (sort === 'low') out.sort((a, b) => a.price - b.price);
-    else if (sort === 'high') out.sort((a, b) => b.price - a.price);
-    else out.sort((a, b) => rank(a) - rank(b));
+    out.sort((a, b) => rank(a) - rank(b));
     return out;
-  }, [products, filter, query, sort]);
+  }, [products, filter, query]);
 
   const spotlight = useMemo(() => products.find((p) => p.badge === 'Top Pick') ?? products[0], [products]);
   const savedProducts = products.filter((p) => saved.includes(p.id));
@@ -560,7 +544,6 @@ function Home() {
           <div className="toolbar">
             <div className="toolbar-top">
               <label className="field"><IconSearch /><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search lights, mugs, gifts…" aria-label="Search picks" />{query && <button type="button" className="x" onClick={() => setQuery('')} aria-label="Clear search">✕</button>}</label>
-              <div className="select"><select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort picks"><option value="featured">Featured first</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select></div>
             </div>
             <div className="chip-row no-scrollbar" role="group" aria-label="Filters">
               {FILTERS.map((f) => <button key={f.id} className="pz-chip" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.label}</button>)}
