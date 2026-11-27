@@ -20,6 +20,13 @@ export const BRAND = {
 export const TAGS = ['Gift Ideas', 'Room & Decor', 'Trending'] as const;
 export const RECIPIENTS = ['For Her', 'For Him', 'Friends', 'Home'] as const;
 export type Badge = 'Top Pick' | 'Trending';
+export type Store = 'amazon' | 'ebay';
+export const STORES: { id: Store; label: string; buy: string }[] = [
+  { id: 'amazon', label: 'Amazon', buy: 'Buy on Amazon' },
+  { id: 'ebay', label: 'eBay', buy: 'Buy on eBay' },
+];
+// Text for the buy button; products saved before the store field existed get a neutral label.
+export const buyLabel = (p: Pick<Product, 'store'>) => STORES.find((s) => s.id === p.store)?.buy ?? 'Buy now';
 
 export interface Product {
   id: string;
@@ -29,6 +36,7 @@ export interface Product {
   tags: string[];
   recipients: string[];
   badge?: Badge;
+  store?: Store;
   bestFor: string;
   why: string;
   url: string;
@@ -81,6 +89,7 @@ export function normalizeProduct(id: string, d: Record<string, unknown>): Produc
     id, title: str(d.title, 'Untitled'),
     season: str(d.season), category: str(d.category),
     tags: arr(d.tags), recipients: arr(d.recipients),
+    store: d.store === 'amazon' || d.store === 'ebay' ? (d.store as Store) : undefined,
     badge: badge === 'Top Pick' || badge === 'Trending' ? (badge as Badge) : undefined,
     bestFor: str(d.bestFor), why: str(d.why), url: str(d.url, '#'), image: str(d.image) || undefined,
     emoji: str(d.emoji, '🛍️'), isActive: d.isActive !== false,
@@ -92,7 +101,7 @@ const G = 'Gift Ideas', D = 'Room & Decor';
 const HER = 'For Her', HIM = 'For Him', FR = 'Friends', HOME = 'Home';
 const P = (season: string, id: string, title: string, category: string, tags: string[],
   recipients: string[], badge: Badge | undefined, bestFor: string, why: string, emoji: string): Product =>
-  ({ id, title, season, category, tags, recipients, badge, bestFor, why, url: `https://example.com/aff/${id}`, emoji, isActive: true });
+  ({ id, title, season, category, tags, recipients, badge, bestFor, why, url: `https://example.com/aff/${id}`, store: 'amazon', emoji, isActive: true });
 
 export const SEED_PRODUCTS: Product[] = [
   P('new-year', 'warm-fairy-lights', 'Warm LED Fairy Lights (33 ft)', 'Lights', [D, G], [HER, HIM, FR, HOME], 'Top Pick', 'Instant cozy corners', 'Soft warm glow, USB powered, and the easiest room upgrade there is.', '✨'),
@@ -170,6 +179,16 @@ export const tileBg = (seed: string) => {
   return `linear-gradient(145deg, ${a}, ${b})`;
 };
 
+/* Cloudinary: ask for an auto-format, auto-quality, resized copy so pages stay fast. Other URLs pass through. */
+export const CLOUDINARY = {
+  cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined,
+  uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined,
+};
+export const isCloudinaryConfigured = Boolean(CLOUDINARY.cloudName && CLOUDINARY.uploadPreset);
+export const optimizeImage = (url?: string, width = 800) =>
+  url && url.includes('res.cloudinary.com') && url.includes('/image/upload/') && !/\/image\/upload\/[^/]*(f_auto|q_auto)/.test(url)
+    ? url.replace('/image/upload/', `/image/upload/f_auto,q_auto,c_limit,w_${width}/`) : url;
+
 // Shows the image, or a colourful emoji tile if the URL is missing or fails.
 export function SafeImage({ src, alt, emoji, className = '' }: { src?: string; alt: string; emoji: string; className?: string }) {
   const [bad, setBad] = useState(!src);
@@ -180,5 +199,5 @@ export function SafeImage({ src, alt, emoji, className = '' }: { src?: string; a
       </div>
     );
   }
-  return <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setBad(true)} className={`object-cover ${className}`} />;
+  return <img src={optimizeImage(src)} alt={alt} loading="lazy" decoding="async" onError={() => setBad(true)} className={`object-cover ${className}`} />;
 }
