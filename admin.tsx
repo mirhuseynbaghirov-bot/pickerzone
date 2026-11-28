@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import {
-  ACTIVE_SEASON, app, CLOUDINARY, isCloudinaryConfigured, isFirebaseConfigured, Logo, normalizeProduct, RECIPIENTS, SafeImage, SEASONS,
+  ACTIVE_SEASON, app, CLOUDINARY, isCloudinaryConfigured, isFirebaseConfigured, Logo, normalizeProduct, SafeImage, SEASONS,
   SEED_PRODUCTS, STORES, TAGS, useEscape, type Product,
 } from './shared';
 
@@ -96,7 +96,7 @@ function uploadToCloudinary(file: File, onProgress: (pct: number) => void): Prom
   });
 }
 
-function ImageUpload({ value, emoji, alt, onChange, onError }: { value?: string; emoji: string; alt: string; onChange: (url: string | undefined) => void; onError: (msg: string) => void }) {
+function ImageUpload({ value, alt, onChange, onError }: { value?: string; alt: string; onChange: (url: string | undefined) => void; onError: (msg: string) => void }) {
   const [pct, setPct] = useState<number | null>(null);
   const pick = async (file?: File) => {
     if (!file) return;
@@ -112,7 +112,7 @@ function ImageUpload({ value, emoji, alt, onChange, onError }: { value?: string;
       <span className="block text-sm font-medium text-navy">Product image</span>
       {!isCloudinaryConfigured && <p className="mt-1 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">Image upload is not set up yet. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in Vercel and redeploy (see CLOUDINARY_TELIMATI.md).</p>}
       <div className="mt-1 flex items-center gap-3">
-        <SafeImage key={value ?? ''} src={value} alt={alt} emoji={emoji || '🛍️'} className="h-28 w-28 shrink-0 rounded-lg" />
+        <SafeImage key={value ?? ''} src={value} alt={alt} className="h-28 w-28 shrink-0 rounded-lg" />
         <div className="space-y-2">
           <label className={`btn-ghost inline-block cursor-pointer ${!isCloudinaryConfigured || pct !== null ? 'pointer-events-none opacity-50' : ''}`}>
             {pct !== null ? `Uploading… ${pct}%` : value ? 'Replace image' : 'Upload image'}
@@ -128,7 +128,7 @@ function ImageUpload({ value, emoji, alt, onChange, onError }: { value?: string;
 
 /* ───────── Product form ───────── */
 const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'product';
-const blank = (season: string): Product => ({ id: '', title: '', season, category: '', tags: [], recipients: [], badge: undefined, store: undefined, bestFor: '', why: '', url: '', image: undefined, emoji: '🛍️', isActive: true });
+const blank = (season: string): Product => ({ id: '', title: '', season, category: '', tags: [], recipients: [], badge: undefined, store: undefined, bestFor: '', why: '', url: '', image: undefined, isActive: true });
 
 function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Product | null; defaultSeason: string; onCancel: () => void; onSave: (p: Product) => Promise<void> }) {
   const [d, setD] = useState<Product>(initial ?? blank(defaultSeason));
@@ -145,7 +145,7 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
     if (!/^https?:\/\//i.test(d.url.trim())) return setError('Affiliate URL must start with http:// or https://');
     setBusy(true); setError('');
     try {
-      await onSave({ ...d, title: d.title.trim(), url: d.url.trim(), image: d.image || undefined, emoji: d.emoji.trim() || '🛍️', id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
+      await onSave({ ...d, title: d.title.trim(), url: d.url.trim(), image: d.image || undefined, id: d.id || `${slug(d.title)}-${Math.random().toString(36).slice(2, 6)}` });
     } catch (err) { setError((err as Error).message || 'Could not save.'); setBusy(false); }
   };
 
@@ -159,13 +159,11 @@ function ProductForm({ initial, defaultSeason, onCancel, onSave }: { initial: Pr
           <label className="block text-sm font-medium text-navy">Category<input className="input mt-1" value={d.category} onChange={(e) => set('category', e.target.value)} placeholder="Lights" /></label>
         </div>
         <fieldset><legend className="text-sm font-medium text-navy">Tags (filters)</legend><div className="mt-1 flex flex-wrap gap-2">{TAGS.map((t) => <button type="button" key={t} className="pill" aria-pressed={d.tags.includes(t)} onClick={() => toggle('tags', t)}>{t}</button>)}</div></fieldset>
-        <fieldset><legend className="text-sm font-medium text-navy">Who is it for? (Gift Finder)</legend><div className="mt-1 flex flex-wrap gap-2">{RECIPIENTS.map((t) => <button type="button" key={t} className="pill" aria-pressed={d.recipients.includes(t)} onClick={() => toggle('recipients', t)}>{t}</button>)}</div></fieldset>
         <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-navy">Badge<select className="input mt-1" value={d.badge ?? ''} onChange={(e) => set('badge', (e.target.value || undefined) as Product['badge'])}><option value="">None</option><option>Top Pick</option><option>Trending</option></select></label>
           <label className="block text-sm font-medium text-navy">Best for<input className="input mt-1" value={d.bestFor} onChange={(e) => set('bestFor', e.target.value)} placeholder="Cozy corners" /></label>
         </div>
-        <ImageUpload value={d.image} emoji={d.emoji} alt={d.title || 'Preview'} onChange={(url) => set('image', url)} onError={setError} />
-        <label className="block w-24 text-sm font-medium text-navy">Emoji (no-image fallback)<input className="input mt-1 text-center" value={d.emoji} onChange={(e) => set('emoji', e.target.value)} maxLength={4} /></label>
+        <ImageUpload value={d.image} alt={d.title || 'Preview'} onChange={(url) => set('image', url)} onError={setError} />
         <fieldset><legend className="text-sm font-medium text-navy">Where is it sold? (button on the site)</legend><div className="mt-1 flex flex-wrap gap-2">{STORES.map((s) => <button type="button" key={s.id} className="pill" aria-pressed={d.store === s.id} onClick={() => set('store', s.id)}>{s.label}</button>)}</div></fieldset>
         <label className="block text-sm font-medium text-navy">Affiliate link (Amazon / eBay product link)<input className="input mt-1" type="url" value={d.url} onChange={(e) => set('url', e.target.value)} placeholder="https://…" required /></label>
         <label className="block text-sm font-medium text-navy">Why we picked it<textarea className="input mt-1" rows={3} value={d.why} onChange={(e) => set('why', e.target.value)} /></label>
@@ -245,7 +243,7 @@ function Dashboard({ user, onSignOut }: { user: User; onSignOut: () => void }) {
             <ul className="space-y-2">
               {list.map((p) => (
                 <li key={p.id} className={`flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 ${p.isActive ? '' : 'opacity-60'}`}>
-                  <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="h-14 w-14 shrink-0 rounded-lg text-2xl" />
+                  <SafeImage src={p.image} alt={p.title} className="h-14 w-14 shrink-0 rounded-lg text-2xl" />
                   <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate font-bold text-navy">{p.title}</p>
                     <p className="text-xs text-slate-500">{SEASONS[p.season]?.name ?? (p.season || 'No season')}{p.category && ` · ${p.category}`} · {STORES.find((s) => s.id === p.store)?.label ?? 'No store'}</p>
