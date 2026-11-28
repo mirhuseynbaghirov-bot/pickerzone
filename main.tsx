@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import {
   ACTIVE_SEASON, app, BRAND, buyLabel, FILTERS, getSeason, isFirebaseConfigured, Logo, normalizeProduct,
-  RECIPIENTS, SafeImage, SEED_PRODUCTS, tileBg, useEscape, type Product, type Season,
+  initial, SafeImage, SEED_PRODUCTS, tileBg, useEscape, type Product, type Season,
 } from './shared';
 import './style.css';
 
@@ -94,6 +94,7 @@ const IconShare = () => <svg width="19" height="19" viewBox="0 0 24 24" {...S} a
 const IconCompare = () => <svg width="19" height="19" viewBox="0 0 24 24" {...S} aria-hidden="true"><path d="M7 4v16M17 4v16M3 8h8M13 16h8" /></svg>;
 const IconCheck = ({ size = 16 }: { size?: number }) => <svg width={size} height={size} viewBox="0 0 24 24" {...S} strokeWidth={2.6} aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>;
 const IconUp = () => <svg width="20" height="20" viewBox="0 0 24 24" {...S} aria-hidden="true"><path d="m18 15-6-6-6 6" /></svg>;
+const IconSnow = () => <svg width="18" height="18" viewBox="0 0 24 24" {...S} aria-hidden="true"><path d="M12 2v20M4.2 7l15.6 10M19.8 7 4.2 17" /></svg>;
 const Arrow = () => <span className="arr" aria-hidden="true">→</span>;
 
 /* ───────── snow ───────── */
@@ -151,12 +152,12 @@ function Header({ savedCount, onOpenSaved, snowAvailable, snowOn, onToggleSnow }
       <div className="wrap">
         <Logo />
         <nav className="nav" aria-label="Primary">
-          <a href="#picks">All picks</a><a href="#finder">Gift finder</a><a href="#how">How we pick</a><a href="#faq">FAQ</a>
+          <a href="#picks">All picks</a><a href="#how">How we pick</a><a href="#faq">FAQ</a>
         </nav>
         <div className="hdr-actions">
           {snowAvailable && (
             <button onClick={onToggleSnow} aria-pressed={snowOn} aria-label={snowOn ? 'Turn snow off' : 'Turn snow on'} className="icon-btn">
-              <span aria-hidden="true">❄</span><span className="hide-sm">{snowOn ? 'On' : 'Off'}</span>
+              <IconSnow /><span className="hide-sm">{snowOn ? 'On' : 'Off'}</span>
             </button>
           )}
           <button onClick={onOpenSaved} className="icon-btn" aria-label={`My Picks, ${savedCount} saved`}>
@@ -220,7 +221,7 @@ function Hero({ season, products, query, onQuery, onSearch, onFilter }: { season
           )}
           {feature.map((p) => (
             <a key={p.id} className="float" href={`#p-${p.id}`}>
-              <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
+              <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{initial(p.title)}</span>
               <span><span className="n">{p.title}</span><span className="p" style={{ display: 'block' }}>{p.badge ?? p.category}</span></span>
             </a>
           ))}
@@ -232,10 +233,10 @@ function Hero({ season, products, query, onQuery, onSearch, onFilter }: { season
 }
 
 /* ───────── categories ───────── */
-const CAT_META: Record<string, { icon: string; blurb: string }> = {
-  gift: { icon: '🎁', blurb: 'Ready-to-wrap winners' },
-  decor: { icon: '🏠', blurb: 'Make your space glow' },
-  trending: { icon: '🔥', blurb: 'What everyone is saving' },
+const CAT_META: Record<string, { blurb: string }> = {
+  gift: { blurb: 'Ready-to-wrap winners' },
+  decor: { blurb: 'Make your space glow' },
+  trending: { blurb: 'What everyone is saving' },
 };
 
 function Categories({ products, onPick }: { products: Product[]; onPick: (id: string) => void }) {
@@ -246,7 +247,6 @@ function Categories({ products, onPick }: { products: Product[]; onPick: (id: st
           <Reveal key={f.id} delay={i}>
             <button className="cat" style={{ width: '100%' }} onClick={() => onPick(f.id)}>
               <em>{products.filter(f.test).length}</em>
-              <span className="ic" aria-hidden="true">{CAT_META[f.id].icon}</span>
               <b>{f.label}</b>
               <span>{CAT_META[f.id].blurb}</span>
             </button>
@@ -263,7 +263,7 @@ function Spotlight({ product: p }: { product: Product }) {
     <Reveal className="wrap section" >
       <div className="sec-head"><div><span className="kicker">Editor’s choice</span><h2 className="h2">Our number one right now</h2></div></div>
       <article className="spot">
-        <div className="spot-visual"><SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="tile" /></div>
+        <div className="spot-visual"><SafeImage src={p.image} alt={p.title} className="tile" /></div>
         <div className="spot-body">
           <span className="tag">★ Top pick</span>
           <h3>{p.title}</h3>
@@ -278,49 +278,14 @@ function Spotlight({ product: p }: { product: Product }) {
   );
 }
 
-/* ───────── gift finder ───────── */
-const WHO_ICON: Record<string, string> = { 'For Her': '👩', 'For Him': '👨', Friends: '🧑‍🤝‍🧑', Home: '🏡' };
-function GiftFinder({ products }: { products: Product[] }) {
-  const [who, setWho] = useState<string | null>(null);
-  const matches = useMemo(() => !who ? [] : products
-    .filter((p) => p.recipients.includes(who))
-    .sort((a, b) => Number(b.badge === 'Top Pick') - Number(a.badge === 'Top Pick')).slice(0, 3), [products, who]);
-  return (
-    <Reveal as="section" className="wrap section">
-      <div id="finder" className="finder" aria-labelledby="finder-h" style={{ scrollMarginTop: 90 }}>
-        <div className="finder-ctl">
-          <span className="kicker">Gift finder</span>
-          <h3 id="finder-h">One tap to the perfect gift.</h3>
-          <p>Tell us who it’s for. We’ll do the rest.</p>
-          <div className="step" role="group" aria-label="Who is it for?">
-            <div className="lbl"><span className="num">1</span>Who’s it for?</div>
-            <div className="chips">{RECIPIENTS.map((w) => <button key={w} className="pz-chip" aria-pressed={who === w} onClick={() => setWho(w)}><span aria-hidden="true">{WHO_ICON[w] ?? '🎁'}</span>{w}</button>)}</div>
-          </div>
-        </div>
-        <div className="finder-out" aria-live="polite">
-          {!who && <p className="empty-hint"><span className="big" aria-hidden="true">🎯</span>Pick who the gift is for and your best matches show up here.</p>}
-          {who && matches.length === 0 && <p className="empty-hint"><span className="big" aria-hidden="true">🤔</span>Nothing here yet. Try someone else.</p>}
-          {matches.map((p) => (
-            <a key={p.id} className="match" href={p.url} target="_blank" rel="nofollow sponsored noopener">
-              <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
-              <span style={{ minWidth: 0 }}><span className="n" style={{ display: 'block' }}>{p.title}</span><span className="s" style={{ display: 'block' }}>{p.bestFor}</span></span>
-              <span className="go">{buyLabel(p)} →</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    </Reveal>
-  );
-}
-
 /* ───────── product card ───────── */
 function ProductCard({ product: p, index, saved, comparing, highlighted, onSave, onCompare, onShare }: { product: Product; index: number; saved: boolean; comparing: boolean; highlighted: boolean; onSave: () => void; onCompare: () => void; onShare: () => void }) {
   const [ref, shown] = useReveal<HTMLElement>();
   return (
     <article ref={ref} id={`p-${p.id}`} style={{ ['--i' as string]: index % 3 }} className={`card reveal ${shown ? 'in' : ''} ${highlighted ? 'hl' : ''} ${comparing ? 'cmp' : ''}`}>
       <div className="card-media">
-        <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="tile" />
-        {p.badge && <span className={`badge ${p.badge === 'Top Pick' ? 'top' : 'trend'}`}>{p.badge === 'Top Pick' ? '★ Top Pick' : '🔥 Trending'}</span>}
+        <SafeImage src={p.image} alt={p.title} className="tile" />
+        {p.badge && <span className={`badge ${p.badge === 'Top Pick' ? 'top' : 'trend'}`}>{p.badge === 'Top Pick' ? '★ Top Pick' : 'Trending'}</span>}
         <button onClick={onSave} aria-pressed={saved} aria-label={saved ? `Remove ${p.title} from My Picks` : `Save ${p.title} to My Picks`} className="heart"><IconHeart /></button>
       </div>
       <div className="card-body">
@@ -363,7 +328,7 @@ function CompareModal({ items, onClose, onRemove }: { items: Product[]; onClose:
             {items.map((p) => {
               return (
                 <div key={p.id} className="cmp-col">
-                  <SafeImage src={p.image} alt={p.title} emoji={p.emoji} className="tile" />
+                  <SafeImage src={p.image} alt={p.title} className="tile" />
                   <h3>{p.title}</h3>
                   <dl>
                     <div><dt>Best for</dt><dd>{p.bestFor || '—'}</dd></div>
@@ -388,11 +353,11 @@ function SavedDrawer({ items, onClose, onRemove }: { items: Product[]; onClose: 
     <div className="overlay" onClick={onClose}>
       <aside role="dialog" aria-modal="true" aria-label="My Picks" onClick={(e) => e.stopPropagation()} className="drawer">
         <div className="drawer-h"><h2>My Picks</h2><button onClick={onClose} className="close" aria-label="Close My Picks">✕</button></div>
-        {items.length === 0 ? <p className="empty"><span className="big" aria-hidden="true">💝</span>Nothing saved yet. Tap the heart on any pick and it will wait for you here.</p> : (
+        {items.length === 0 ? <p className="empty">Nothing saved yet. Tap the heart on any pick and it will wait for you here.</p> : (
           <ul>
             {items.map((p) => (
               <li key={p.id}>
-                <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{p.emoji}</span>
+                <span className="t" style={{ background: tileBg(p.title) }} aria-hidden="true">{initial(p.title)}</span>
                 <span style={{ minWidth: 0, flex: 1 }}><span className="n" style={{ display: 'block' }}>{p.title}</span></span>
                 <a href={p.url} target="_blank" rel="nofollow sponsored noopener" className="pz-btn pz-btn-accent pz-btn-sm">{buyLabel(p)}</a>
                 <button className="rm" onClick={() => onRemove(p.id)} aria-label={`Remove ${p.title}`}>✕</button>
@@ -408,16 +373,16 @@ function SavedDrawer({ items, onClose, onRemove }: { items: Product[]; onClose: 
 /* ───────── static sections ───────── */
 function HowItWorks() {
   const steps = [
-    { icon: '🔎', title: 'We search', text: 'We scan what people actually buy, save and rave about, then cut it down to the few worth your time.' },
-    { icon: '⚖️', title: 'We compare', text: 'Quality and who it suits best, lined up side by side so you can decide in seconds, not tabs.' },
-    { icon: '🛒', title: 'You shop smarter', text: 'Tap through to the retailer. The price is the same for you; we may earn a small thank-you that keeps this free.' },
+    { title: 'We search', text: 'We scan what people actually buy, save and rave about, then cut it down to the few worth your time.' },
+    { title: 'We compare', text: 'Quality and who it suits best, lined up side by side so you can decide in seconds, not tabs.' },
+    { title: 'You shop smarter', text: 'Tap through to the retailer. The price is the same for you; we may earn a small thank-you that keeps this free.' },
   ];
   return (
     <section id="how" className="wrap section" style={{ scrollMarginTop: 80 }}>
       <Reveal><div className="sec-head"><div><span className="kicker">How we pick</span><h2 className="h2">Less scrolling. Better gifts.</h2><p className="lead">Every pick earns its spot. No filler, no paid placements.</p></div></div></Reveal>
       <div className="how">
         {steps.map((s, i) => (
-          <Reveal key={s.title} delay={i}><div className="how-i"><span className="no" aria-hidden="true">{i + 1}</span><div className="ic" aria-hidden="true">{s.icon}</div><h3>{s.title}</h3><p>{s.text}</p></div></Reveal>
+          <Reveal key={s.title} delay={i}><div className="how-i"><span className="no" aria-hidden="true">{i + 1}</span><h3>{s.title}</h3><p>{s.text}</p></div></Reveal>
         ))}
       </div>
     </section>
@@ -428,7 +393,7 @@ function Faq() {
   const items = [
     ['How does PickerZone make money?', 'When you buy through a link on this site, the retailer may pay us a small commission. It never changes the price you pay.'],
     ['Do affiliate links affect which products you recommend?', 'No. Picks are chosen on value, quality and fit first. If we would not gift it to a friend, it does not make the list.'],
-    ['Where can I see the price?', 'Prices change often, so we do not list them. Tap the “Buy on Amazon” or “Buy on eBay” button to see the current price on the retailer’s page.'],
+    ['Where can I see the price?', 'Prices change often, so we do not list them. Tap the “Buy Product” button to see the current price on the retailer’s page.'],
     ['Can I save things for later?', 'Yes. Tap the heart on any pick and it is kept in My Picks on this device, no account needed.'],
   ];
   return (
@@ -534,7 +499,6 @@ function Home() {
         <Hero season={season} products={products} query={query} onQuery={setQuery} onSearch={() => { setFilter('all'); toPicks(); }} onFilter={jump} />
         {!loading && <Categories products={products} onPick={jump} />}
         {!loading && spotlight && !filtered && <Spotlight product={spotlight} />}
-        {!loading && <GiftFinder products={products} />}
 
         <section id="picks" aria-label="All picks" className="wrap section" style={{ scrollMarginTop: 80 }}>
           <div className="sec-head">
@@ -550,7 +514,7 @@ function Home() {
             </div>
           </div>
           {loading ? <ProductSkeleton /> : list.length === 0 ? (
-            <div className="none"><span className="big" aria-hidden="true">🔍</span>No picks match that.<br /><button className="pz-btn pz-btn-ink pz-btn-sm" onClick={() => { setQuery(''); setFilter('all'); }}>Clear search and filters</button></div>
+            <div className="none">No picks match that.<br /><button className="pz-btn pz-btn-ink pz-btn-sm" onClick={() => { setQuery(''); setFilter('all'); }}>Clear search and filters</button></div>
           ) : (
             <div className="pgrid">
               {list.map((p, i) => <ProductCard key={p.id} product={p} index={i} saved={saved.includes(p.id)} comparing={compare.includes(p.id)} highlighted={focusId === p.id} onSave={() => toggleSave(p.id)} onCompare={() => toggleCompare(p.id)} onShare={() => share(p)} />)}
@@ -565,7 +529,7 @@ function Home() {
 
       {compareProducts.length > 0 && (
         <div className="cmpbar" role="region" aria-label="Comparison">
-          <div className="em" aria-hidden="true">{compareProducts.map((p) => <span key={p.id}>{p.emoji}</span>)}</div>
+          <div className="em" aria-hidden="true">{compareProducts.map((p) => <span key={p.id}>{initial(p.title)}</span>)}</div>
           <p><b>{compareProducts.length}/{MAX_COMPARE} selected</b>{compareProducts.length < 2 ? 'Pick one more to compare' : 'Ready to compare'}</p>
           <button className="clear" onClick={() => setCompare([])}>Clear</button>
           <button className="pz-btn pz-btn-accent pz-btn-sm" disabled={compareProducts.length < 2} onClick={() => setShowCompare(true)}>Compare <Arrow /></button>
