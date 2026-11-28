@@ -22,11 +22,11 @@ export const RECIPIENTS = ['For Her', 'For Him', 'Friends', 'Home'] as const;
 export type Badge = 'Top Pick' | 'Trending';
 export type Store = 'amazon' | 'ebay';
 export const STORES: { id: Store; label: string; buy: string }[] = [
-  { id: 'amazon', label: 'Amazon', buy: 'Buy on Amazon' },
-  { id: 'ebay', label: 'eBay', buy: 'Buy on eBay' },
+  { id: 'amazon', label: 'Amazon', buy: 'Buy Product' },
+  { id: 'ebay', label: 'eBay', buy: 'Buy Product' },
 ];
 // Text for the buy button; products saved before the store field existed get a neutral label.
-export const buyLabel = (p: Pick<Product, 'store'>) => STORES.find((s) => s.id === p.store)?.buy ?? 'Buy now';
+export const buyLabel = (p: Pick<Product, 'store'>) => STORES.find((s) => s.id === p.store)?.buy ?? 'Buy Product';
 
 export interface Product {
   id: string;
@@ -41,7 +41,6 @@ export interface Product {
   why: string;
   url: string;
   image?: string;
-  emoji: string;
   isActive: boolean;
 }
 
@@ -92,7 +91,7 @@ export function normalizeProduct(id: string, d: Record<string, unknown>): Produc
     store: d.store === 'amazon' || d.store === 'ebay' ? (d.store as Store) : undefined,
     badge: badge === 'Top Pick' || badge === 'Trending' ? (badge as Badge) : undefined,
     bestFor: str(d.bestFor), why: str(d.why), url: str(d.url, '#'), image: str(d.image) || undefined,
-    emoji: str(d.emoji, '🛍️'), isActive: d.isActive !== false,
+    isActive: d.isActive !== false,
   };
 }
 
@@ -100,24 +99,24 @@ export function normalizeProduct(id: string, d: Record<string, unknown>): Produc
 const G = 'Gift Ideas', D = 'Room & Decor';
 const HER = 'For Her', HIM = 'For Him', FR = 'Friends', HOME = 'Home';
 const P = (season: string, id: string, title: string, category: string, tags: string[],
-  recipients: string[], badge: Badge | undefined, bestFor: string, why: string, emoji: string): Product =>
-  ({ id, title, season, category, tags, recipients, badge, bestFor, why, url: `https://example.com/aff/${id}`, store: 'amazon', emoji, isActive: true });
+  recipients: string[], badge: Badge | undefined, bestFor: string, why: string): Product =>
+  ({ id, title, season, category, tags, recipients, badge, bestFor, why, url: `https://example.com/aff/${id}`, store: 'amazon', isActive: true });
 
 export const SEED_PRODUCTS: Product[] = [
-  P('new-year', 'warm-fairy-lights', 'Warm LED Fairy Lights (33 ft)', 'Lights', [D, G], [HER, HIM, FR, HOME], 'Top Pick', 'Instant cozy corners', 'Soft warm glow, USB powered, and the easiest room upgrade there is.', '✨'),
-  P('new-year', 'holiday-mug-set', 'Aesthetic Holiday Mug Set (2)', 'Mugs', [G], [HER, HIM, FR, HOME], undefined, 'Couples & coworkers', 'Dishwasher safe, matte finish, ships gift-ready.', '☕'),
-  P('new-year', 'desk-snow-globe', 'Desk Snow Globe', 'Decor', [D, G], [FR, HOME], 'Trending', 'Desk & shelf styling', 'Swirling snow and a warm LED base; the one everyone asks about on video.', '🔮'),
-  P('new-year', 'smart-ambient-lamp', 'Smart Ambient Lamp', 'Lights', [D], [HOME, HER, HIM], 'Top Pick', 'Mood lighting from your phone', 'Millions of colors, app and voice control, and a clean modern shape.', '💡'),
-  P('new-year', 'new-year-gift-bundle', 'New Year Gift Bundle Box', 'Gift Bundles', [G], [HOME, HER, HIM, FR], undefined, 'One-click, no-stress gifting', 'Candle, tea, and notebook in a ready-to-give box.', '🎁'),
-  P('new-year', 'sherpa-throw', 'Cozy Sherpa Throw Blanket', 'Cozy', [D, G], [HOME, HER, HIM], 'Trending', 'Cold-night movie marathons', 'Double-sided fleece that stays soft after repeated washes.', '🧣'),
-  P('new-year', 'countdown-party-kit', 'Midnight Countdown Party Kit', 'Party', [G], [FR], undefined, 'Hosting a great party', 'Everything for the toast: crowns, poppers, and a countdown banner.', '🎉'),
-  P('new-year', 'scented-candle-trio', 'Scented Candle Trio', 'Candles', [G, D], [HER, HIM, HOME, FR], undefined, 'Easy thank-you gifts', 'Three winter scents with a clean burn and a long life.', '🕯️'),
-  P('new-year', 'star-projector', 'Mini Star Projector Light', 'Lights', [D], [HOME, FR, HER, HIM], 'Trending', 'Bedroom & stream backdrops', 'Turns any wall into a night sky, with a timer and remote.', '🌌'),
-  P('new-year', 'goal-planner-2027', '2027 Goal Planner', 'Stationery', [G], [HOME, FR], undefined, 'Fresh-start resolutions', 'Quarterly goal pages plus weekly layouts, in a lay-flat binding.', '📓'),
-  P('valentines', 'rose-gold-heart-necklace', 'Rose Gold Heart Necklace', 'Jewelry', [G], [HER, HIM], 'Top Pick', 'A classic, wearable keepsake', 'Hypoallergenic finish and a gift box included.', '💝'),
-  P('valentines', 'preserved-rose-dome', 'Preserved Rose Glass Dome', 'Decor', [G, D], [HER, HIM, HOME], 'Trending', 'Flowers that last a year', 'Real preserved rose under glass with a soft LED base.', '🌹'),
-  P('valentines', 'couples-mug-pair', 'Couples Mug Pair', 'Mugs', [G], [HER, HIM, FR], undefined, 'Sweet and simple', 'Matching set with a clean modern print.', '☕'),
-  P('valentines', 'heart-neon-light', 'Heart LED Neon Light', 'Lights', [D], [HOME, FR, HER, HIM], 'Trending', 'Room glow-ups', 'Low-heat LED neon that mounts or stands.', '❤️'),
+  P('new-year', 'warm-fairy-lights', 'Warm LED Fairy Lights (33 ft)', 'Lights', [D, G], [HER, HIM, FR, HOME], 'Top Pick', 'Instant cozy corners', 'Soft warm glow, USB powered, and the easiest room upgrade there is.'),
+  P('new-year', 'holiday-mug-set', 'Aesthetic Holiday Mug Set (2)', 'Mugs', [G], [HER, HIM, FR, HOME], undefined, 'Couples & coworkers', 'Dishwasher safe, matte finish, ships gift-ready.'),
+  P('new-year', 'desk-snow-globe', 'Desk Snow Globe', 'Decor', [D, G], [FR, HOME], 'Trending', 'Desk & shelf styling', 'Swirling snow and a warm LED base; the one everyone asks about on video.'),
+  P('new-year', 'smart-ambient-lamp', 'Smart Ambient Lamp', 'Lights', [D], [HOME, HER, HIM], 'Top Pick', 'Mood lighting from your phone', 'Millions of colors, app and voice control, and a clean modern shape.'),
+  P('new-year', 'new-year-gift-bundle', 'New Year Gift Bundle Box', 'Gift Bundles', [G], [HOME, HER, HIM, FR], undefined, 'One-click, no-stress gifting', 'Candle, tea, and notebook in a ready-to-give box.'),
+  P('new-year', 'sherpa-throw', 'Cozy Sherpa Throw Blanket', 'Cozy', [D, G], [HOME, HER, HIM], 'Trending', 'Cold-night movie marathons', 'Double-sided fleece that stays soft after repeated washes.'),
+  P('new-year', 'countdown-party-kit', 'Midnight Countdown Party Kit', 'Party', [G], [FR], undefined, 'Hosting a great party', 'Everything for the toast: crowns, poppers, and a countdown banner.'),
+  P('new-year', 'scented-candle-trio', 'Scented Candle Trio', 'Candles', [G, D], [HER, HIM, HOME, FR], undefined, 'Easy thank-you gifts', 'Three winter scents with a clean burn and a long life.'),
+  P('new-year', 'star-projector', 'Mini Star Projector Light', 'Lights', [D], [HOME, FR, HER, HIM], 'Trending', 'Bedroom & stream backdrops', 'Turns any wall into a night sky, with a timer and remote.'),
+  P('new-year', 'goal-planner-2027', '2027 Goal Planner', 'Stationery', [G], [HOME, FR], undefined, 'Fresh-start resolutions', 'Quarterly goal pages plus weekly layouts, in a lay-flat binding.'),
+  P('valentines', 'rose-gold-heart-necklace', 'Rose Gold Heart Necklace', 'Jewelry', [G], [HER, HIM], 'Top Pick', 'A classic, wearable keepsake', 'Hypoallergenic finish and a gift box included.'),
+  P('valentines', 'preserved-rose-dome', 'Preserved Rose Glass Dome', 'Decor', [G, D], [HER, HIM, HOME], 'Trending', 'Flowers that last a year', 'Real preserved rose under glass with a soft LED base.'),
+  P('valentines', 'couples-mug-pair', 'Couples Mug Pair', 'Mugs', [G], [HER, HIM, FR], undefined, 'Sweet and simple', 'Matching set with a clean modern print.'),
+  P('valentines', 'heart-neon-light', 'Heart LED Neon Light', 'Lights', [D], [HOME, FR, HER, HIM], 'Trending', 'Room glow-ups', 'Low-heat LED neon that mounts or stands.'),
 ];
 
 /* ───────── Firebase (keys come from Vercel / .env) ───────── */
@@ -172,6 +171,7 @@ const TILES: [string, string][] = [
   ['#FFE3C7', '#FFB36B'], ['#D9E6FF', '#8FB4FF'], ['#FFD9E4', '#FF9DBA'],
   ['#D8F5E6', '#7ED9A8'], ['#EADCFF', '#B995FF'], ['#FFF0B8', '#FFD14D'],
 ];
+export const initial = (t: string) => (t.trim().charAt(0) || '·').toUpperCase();
 export const tileBg = (seed: string) => {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
@@ -189,13 +189,13 @@ export const optimizeImage = (url?: string, width = 800) =>
   url && url.includes('res.cloudinary.com') && url.includes('/image/upload/') && !/\/image\/upload\/[^/]*(f_auto|q_auto)/.test(url)
     ? url.replace('/image/upload/', `/image/upload/f_auto,q_auto,c_limit,w_${width}/`) : url;
 
-// Shows the image, or a colourful emoji tile if the URL is missing or fails.
-export function SafeImage({ src, alt, emoji, className = '' }: { src?: string; alt: string; emoji: string; className?: string }) {
+// Shows the image, or a colourful tile with the product's first letter if the URL is missing or fails.
+export function SafeImage({ src, alt, className = '' }: { src?: string; alt: string; className?: string }) {
   const [bad, setBad] = useState(!src);
   if (bad) {
     return (
       <div role="img" aria-label={alt} className={`tile ${className}`} style={{ background: tileBg(alt) }}>
-        <span aria-hidden="true">{emoji}</span>
+        <span aria-hidden="true">{initial(alt)}</span>
       </div>
     );
   }
